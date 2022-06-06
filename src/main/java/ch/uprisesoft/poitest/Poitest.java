@@ -12,6 +12,7 @@ import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import javax.swing.plaf.basic.BasicBorders;
@@ -48,20 +49,25 @@ public class Poitest {
 
     private void run() throws FileNotFoundException, IOException, InvalidFormatException {
 
-//        String newFile = copyWorkBook("C:\\Users\\rma\\Desktop\\BBH\\Baukontrolle_AMSEL_sevi_roman_test.xlsx");
-//         Workbook wb = new XSSFWorkbook(new File(newFile));
-//        Sheet s = wb.getSheet(CONTROL_SHEET_NAME);
-//        List<Kostenstelle> kostenstellen = loadKsTitles(s);
-//        kostenstellen.addAll(loadKs(s));
-//        
-//        for(Kostenstelle k: kostenstellen) {
-//            System.out.println(k.fullStrCsv());
-//        }
+        Workbook wb = new XSSFWorkbook(new File(controlFile));
+
+        List<Posten> posten = new ArrayList<>();
+        
+        posten.addAll(getAnweisungen(wb, REC_SHEET_NAME));
+        posten.addAll(getAnweisungen(wb, DIV_SHEET_NAME));
+        
+        for (Posten p : posten) {
+            System.out.println(p);
+            addToSheet(p);
+        }
+    }
+    
+    private List<Posten> getAnweisungen(Workbook wb, String sheetName) {
+        System.out.println("ANWEISUNGEN: " + sheetName);
         List<Posten> declined = new ArrayList<>();
         List<Posten> rowInControl = new ArrayList<>();
-
-        Workbook wb = new XSSFWorkbook(new File(controlFile));
-        Sheet s = wb.getSheet(REC_SHEET_NAME);
+        
+        Sheet s = wb.getSheet(sheetName);
         Iterator<Row> rows = s.rowIterator();
 
         rows.next();
@@ -74,11 +80,8 @@ public class Poitest {
                 rowInControl.add(p);
             }
         }
-
-        for (Posten p : rowInControl) {
-            System.out.println(p);
-            addToSheet(p);
-        }
+        
+        return rowInControl;
     }
 
     private void addToSheet(Posten p) throws IOException, InvalidFormatException {
@@ -133,8 +136,11 @@ public class Poitest {
 
         String empfaenger = row.getCell(4).getStringCellValue();
         int rekap = (int) row.getCell(6).getNumericCellValue();
+        
+        Cell kommentarCell = row.getCell(7);
+        String kommentar = formatter.formatCellValue(kommentarCell);
 
-        return new Posten(summe, bkp, ks, empfaenger, reNr, rekap);
+        return new Posten(summe, bkp, ks, empfaenger, reNr, rekap, kommentar);
     }
 
     private List<Kostenstelle> loadKs(Sheet s) {

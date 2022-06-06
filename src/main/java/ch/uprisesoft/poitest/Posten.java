@@ -16,14 +16,16 @@ public class Posten {
     private final String reNr;
     private final String empfaenger;
     private final int rekap;
+    private final String kommentar;
 
-    public Posten(Double summe, String bkp, String kostenstelle,  String empfaenger, String reNr, int rekap) {
+    public Posten(Double summe, String bkp, String kostenstelle,  String empfaenger, String reNr, int rekap, String kommentar) {
         this.summe = summe;
         this.bkp = bkp;
         this.kostenstelle = kostenstelle;
         this.empfaenger = empfaenger;
         this.reNr = reNr;
         this.rekap = rekap;
+        this.kommentar = kommentar;
     }
 
     public Double getSumme() {
@@ -50,10 +52,13 @@ public class Posten {
         return rekap;
     }
 
-    @Override
-    public String toString() {
-        return "Posten{" + "summe=" + summe + ", bkp=" + bkp + ", empfaenger=" + empfaenger + ", reNr=" + reNr + ", rekap=" + rekap + '}';
+    public String getKommentar() {
+        return kommentar;
     }
 
+    @Override
+    public String toString() {
+        return "Posten{" + "summe=" + summe + ", bkp=" + bkp + ", kostenstelle=" + kostenstelle + ", reNr=" + reNr + ", empfaenger=" + empfaenger + ", rekap=" + rekap + ", kommentar=" + kommentar + '}';
+    }
     
 }
