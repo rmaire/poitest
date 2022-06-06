@@ -63,7 +63,6 @@ public class Poitest {
     }
     
     private List<Posten> getAnweisungen(Workbook wb, String sheetName) {
-        System.out.println("ANWEISUNGEN: " + sheetName);
         List<Posten> declined = new ArrayList<>();
         List<Posten> rowInControl = new ArrayList<>();
         
@@ -134,13 +133,15 @@ public class Poitest {
         Cell ksCell = row.getCell(1);
         String ks = formatter.formatCellValue(ksCell);
 
-        String empfaenger = row.getCell(4).getStringCellValue();
-        int rekap = (int) row.getCell(6).getNumericCellValue();
+        Cell empfaengerCell = row.getCell(4);
+        String empfaenger = formatter.formatCellValue(empfaengerCell);
+        
+//        int rekap = (int) row.getCell(6).getNumericCellValue();
         
         Cell kommentarCell = row.getCell(7);
         String kommentar = formatter.formatCellValue(kommentarCell);
 
-        return new Posten(summe, bkp, ks, empfaenger, reNr, rekap, kommentar);
+        return new Posten(summe, bkp, ks, empfaenger, reNr, 0, kommentar);
     }
 
     private List<Kostenstelle> loadKs(Sheet s) {
