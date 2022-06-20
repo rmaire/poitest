@@ -9,22 +9,24 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
-import javax.swing.plaf.basic.BasicBorders;
+import java.util.Optional;
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.CellType;
+import org.apache.poi.ss.usermodel.CreationHelper;
 import org.apache.poi.ss.usermodel.DataFormatter;
+import org.apache.poi.ss.usermodel.Font;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
-import org.apache.poi.ss.usermodel.WorkbookFactory;
-import org.apache.poi.xssf.usermodel.XSSFRow;
+import org.apache.poi.ss.util.CellUtil;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 /**
@@ -38,9 +40,11 @@ public class Poitest {
     private static String DIV_SHEET_NAME = "Divers";
 
     private String controlFile;
+    
+//    private List<Posten> posten;
 
     public Poitest() throws IOException, InvalidFormatException {
-        controlFile = copyWorkBook("C:\\Users\\rma\\Desktop\\BBH\\Baukontrolle_AMSEL_sevi_roman_test.xlsx");
+        controlFile = copyWorkBook("C:\\Users\\rma\\Desktop\\BBH\\Baukontrolle_AMSEL_sevi_roman_neu.xlsx");
     }
 
     public static void main(String[] args) throws IOException, InvalidFormatException {
@@ -50,22 +54,30 @@ public class Poitest {
     private void run() throws FileNotFoundException, IOException, InvalidFormatException {
 
         Workbook wb = new XSSFWorkbook(new File(controlFile));
+//        Sheet s = wb.getSheet(CONTROL_SHEET_NAME);
+//        Row r = s.getRow(387);
+//        Cell c = r.getCell(15);
+//        System.out.println(c.getNumericCellValue());
+//        System.out.println(c.getCellStyle().getDataFormatString());
+//        System.out.println(c.getCellStyle().getDataFormat());
 
         List<Posten> posten = new ArrayList<>();
-        
+
         posten.addAll(getAnweisungen(wb, REC_SHEET_NAME));
         posten.addAll(getAnweisungen(wb, DIV_SHEET_NAME));
-        
+
+        wb.close();
+
         for (Posten p : posten) {
             System.out.println(p);
             addToSheet(p);
         }
     }
-    
+
     private List<Posten> getAnweisungen(Workbook wb, String sheetName) {
         List<Posten> declined = new ArrayList<>();
         List<Posten> rowInControl = new ArrayList<>();
-        
+
         Sheet s = wb.getSheet(sheetName);
         Iterator<Row> rows = s.rowIterator();
 
@@ -79,7 +91,7 @@ public class Poitest {
                 rowInControl.add(p);
             }
         }
-        
+
         return rowInControl;
     }
 
@@ -91,21 +103,50 @@ public class Poitest {
         Kostenstelle KostenstelleVonP = findKs(p, kostenstellen);
         s.shiftRows(KostenstelleVonP.getFirstLineInSheet() + 1, s.getLastRowNum(), 1);
         Row newRow = s.createRow(KostenstelleVonP.getFirstLineInSheet() + 1);
-        
-        newRow.createCell(13).setCellValue(p.getSumme()); // Summe
-        newRow.createCell(0).setCellValue(p.getBkp()); // BKP
-        newRow.createCell(1).setCellValue(p.getKostenstelle()); // Kostenstelle
-        newRow.createCell(7).setCellValue(p.getEmpfaenger()); // Empfänger
-        newRow.createCell(12).setCellValue(p.getReNr()); // Beilage-Nr.
+
+        CellStyle cellStyle = wb.createCellStyle();
+        CreationHelper createHelper = wb.getCreationHelper();
+        cellStyle.setDataFormat(
+                createHelper.createDataFormat().getFormat("\"CHF\"\\ #,##0.00"));
+
+        Cell summe = newRow.createCell(13);
+        summe.setCellStyle(cellStyle);
+        summe.setCellValue(p.getSumme());
+        setCellFontTo8Pt(summe);
+
+        Cell bkp = newRow.createCell(0);
+        bkp.setCellValue(p.getBkp());
+        setCellFontTo8Pt(bkp);
+
+        Cell ks = newRow.createCell(1);
+        ks.setCellValue(p.getKostenstelle());
+        setCellFontTo8Pt(ks);
+
+        Cell empfaenger = newRow.createCell(7);
+        empfaenger.setCellValue(p.getEmpfaenger());
+        setCellFontTo8Pt(empfaenger);
+
+        Cell reNr = newRow.createCell(12);
+        reNr.setCellValue(p.getReNr());
+        setCellFontTo8Pt(reNr);
+
         wb.write(new FileOutputStream(controlFile));
+        wb.setForceFormulaRecalculation(true);
+        wb.close();
     }
 
     private Kostenstelle findKs(Posten p, List<Kostenstelle> kostenstellen) {
-        return kostenstellen.stream().filter(k -> {
+        Optional<Kostenstelle> ks = kostenstellen.stream().filter(k -> {
             return p.getBkp().equals(k.getBkpNr().toString())
                     && p.getKostenstelle().equals(k.getKs());
         })
-                .findFirst().get();
+                .findFirst();
+
+        if (!ks.isPresent()) {
+            System.out.println("Kostenstelle nicht gefunden: " + p);
+        }
+
+        return ks.get();
     }
 
     private String copyWorkBook(String file) throws IOException, InvalidFormatException {
@@ -113,10 +154,61 @@ public class Poitest {
         String timeStamp = new SimpleDateFormat("ddMMyyyyHHmmss").format(new java.util.Date());
         String newFileName = file.substring(0, fileEndingPos) + "_" + timeStamp + file.substring(fileEndingPos);
 
-        Workbook wb = new XSSFWorkbook(new File(file));
-        wb.write(new FileOutputStream(newFileName));
+        Files.copy(Paths.get(file), Paths.get(newFileName));
 
+//        Workbook wb = new XSSFWorkbook(new File(file));
+//        Sheet s = wb.getSheet(CONTROL_SHEET_NAME);
+//        fillKs(s);
+//        wb.write(new FileOutputStream(newFileName));
         return newFileName;
+    }
+
+    private void fillKs(Sheet s) {
+        Kostenstelle kostenstelle = null;
+
+        Iterator<Row> rows = s.rowIterator();
+        while (rows.hasNext()) {
+            Row r = rows.next();
+            Integer bkpNr = null;
+            String ksNo;
+            String name = "";
+
+            if (r.getCell(0) == null || r.getCell(1) == null) {
+                continue;
+            }
+
+            if (r.getCell(0).getCellType().equals(CellType.NUMERIC)) {
+                bkpNr = (int) r.getCell(0).getNumericCellValue();
+            }
+
+            if (r.getCell(2) != null) {
+                name = r.getCell(2).toString();
+            }
+
+            Cell ksCell = r.getCell(1);
+
+            DataFormatter formatter = new DataFormatter();
+            ksNo = formatter.formatCellValue(ksCell);
+
+            if (ksNo != null && !ksNo.equals("") && bkpNr != null && bkpNr != 0) {
+                Kostenstelle ks = new Kostenstelle(bkpNr, ksNo, name, r.getRowNum());
+                kostenstelle = ks;
+            } else if (kostenstelle != null && bkpNr == null && (ksNo == null || ksNo.equals(""))) {
+                Cell bkp = r.createCell(0);
+                bkp.setCellValue(kostenstelle.getBkpNr());
+                setCellFontTo8Pt(bkp);
+
+                Cell ks = r.createCell(1);
+                ks.setCellValue(kostenstelle.getKs());
+                setCellFontTo8Pt(ks);
+            }
+        }
+    }
+
+    private void setCellFontTo8Pt(Cell c) {
+        Font newFont = c.getSheet().getWorkbook().createFont();
+        newFont.setFontHeightInPoints((short) 8);
+        CellUtil.setFont(c, newFont);
     }
 
     private Posten parseRekapLine(Row row) {
@@ -135,9 +227,7 @@ public class Poitest {
 
         Cell empfaengerCell = row.getCell(4);
         String empfaenger = formatter.formatCellValue(empfaengerCell);
-        
-//        int rekap = (int) row.getCell(6).getNumericCellValue();
-        
+
         Cell kommentarCell = row.getCell(7);
         String kommentar = formatter.formatCellValue(kommentarCell);
 
