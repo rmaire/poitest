@@ -9,6 +9,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
@@ -17,6 +18,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
+import org.apache.poi.openxml4j.util.ZipSecureFile;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.CellType;
@@ -44,7 +46,7 @@ public class Poitest {
 //    private List<Posten> posten;
 
     public Poitest() throws IOException, InvalidFormatException {
-        controlFile = copyWorkBook("C:\\Users\\rma\\Desktop\\BBH\\Baukontrolle_AMSEL_sevi_roman_neu.xlsx");
+        controlFile = copyWorkBook("C:\\Users\\rma\\Desktop\\BBH\\Baukontrolle_AMSEL_sevi_roman_neu_04072022141500_korrigiert.xlsx");
     }
 
     public static void main(String[] args) throws IOException, InvalidFormatException {
@@ -53,7 +55,7 @@ public class Poitest {
 
     private void run() throws FileNotFoundException, IOException, InvalidFormatException {
 
-        Workbook wb = new XSSFWorkbook(new File(controlFile));
+        Workbook wb = new XSSFWorkbook(new FileInputStream(controlFile));
 //        Sheet s = wb.getSheet(CONTROL_SHEET_NAME);
 //        Row r = s.getRow(387);
 //        Cell c = r.getCell(15);
@@ -66,12 +68,18 @@ public class Poitest {
         posten.addAll(getAnweisungen(wb, REC_SHEET_NAME));
         posten.addAll(getAnweisungen(wb, DIV_SHEET_NAME));
 
-        wb.close();
+//        wb.close();
 
+//        wb = new XSSFWorkbook(new FileInputStream(controlFile));
+//        ZipSecureFile.setMinInflateRatio(-1.0d);
         for (Posten p : posten) {
             System.out.println(p);
-            addToSheet(p);
+            addToSheet(p, wb);
         }
+        
+        wb.write(new FileOutputStream(controlFile));
+        wb.setForceFormulaRecalculation(true);
+        wb.close();
     }
 
     private List<Posten> getAnweisungen(Workbook wb, String sheetName) {
@@ -85,7 +93,7 @@ public class Poitest {
         while (rows.hasNext()) {
             Row r = rows.next();
             Posten p = parseRekapLine(r);
-            if (p.getBkp().equals("Divers") || p.getKostenstelle().equals("Divers")) {
+            if (p.getBkp().toLowerCase().equals("divers") || p.getKostenstelle().toLowerCase().equals("divers")) {
                 declined.add(p);
             } else {
                 rowInControl.add(p);
@@ -95,8 +103,9 @@ public class Poitest {
         return rowInControl;
     }
 
-    private void addToSheet(Posten p) throws IOException, InvalidFormatException {
-        Workbook wb = new XSSFWorkbook(new FileInputStream(controlFile));
+    private void addToSheet(Posten p, Workbook wb) throws IOException, InvalidFormatException {
+//        Workbook wb = new XSSFWorkbook(new FileInputStream(controlFile));
+//        ZipSecureFile.setMinInflateRatio(-1.0d); 
         Sheet s = wb.getSheet(CONTROL_SHEET_NAME);
         List<Kostenstelle> kostenstellen = loadKsTitles(s);
         kostenstellen.addAll(loadKs(s));
@@ -111,7 +120,7 @@ public class Poitest {
 
         Cell summe = newRow.createCell(13);
         summe.setCellStyle(cellStyle);
-        summe.setCellValue(p.getSumme());
+        summe.setCellValue(p.getSumme().doubleValue());
         setCellFontTo8Pt(summe);
 
         Cell bkp = newRow.createCell(0);
@@ -129,10 +138,18 @@ public class Poitest {
         Cell reNr = newRow.createCell(12);
         reNr.setCellValue(p.getReNr());
         setCellFontTo8Pt(reNr);
+        
+        Cell kommentar = newRow.createCell(8);
+        kommentar.setCellValue(p.getKommentar());
+        setCellFontTo8Pt(kommentar);
+        
+        Cell rekap = newRow.createCell(20);
+        rekap.setCellValue(p.getRekap());
+        setCellFontTo8Pt(rekap);
 
-        wb.write(new FileOutputStream(controlFile));
-        wb.setForceFormulaRecalculation(true);
-        wb.close();
+//        wb.write(new FileOutputStream(controlFile));
+//        wb.setForceFormulaRecalculation(true);
+//        wb.close();
     }
 
     private Kostenstelle findKs(Posten p, List<Kostenstelle> kostenstellen) {
@@ -214,7 +231,7 @@ public class Poitest {
     private Posten parseRekapLine(Row row) {
         DataFormatter formatter = new DataFormatter();
 
-        Double summe = row.getCell(5).getNumericCellValue();
+        String summe = Double.toString(row.getCell(5).getNumericCellValue());
 
         Cell bkpCell = row.getCell(0);
         String bkp = formatter.formatCellValue(bkpCell);
@@ -225,13 +242,16 @@ public class Poitest {
         Cell ksCell = row.getCell(1);
         String ks = formatter.formatCellValue(ksCell);
 
-        Cell empfaengerCell = row.getCell(4);
+        Cell empfaengerCell = row.getCell(3);
         String empfaenger = formatter.formatCellValue(empfaengerCell);
 
         Cell kommentarCell = row.getCell(7);
         String kommentar = formatter.formatCellValue(kommentarCell);
+        
+        Cell rekapCell = row.getCell(6);
+        String rekap =  formatter.formatCellValue(rekapCell);
 
-        return new Posten(summe, bkp, ks, empfaenger, reNr, 0, kommentar);
+        return new Posten(summe, bkp, ks, empfaenger, reNr, rekap, kommentar);
     }
 
     private List<Kostenstelle> loadKs(Sheet s) {

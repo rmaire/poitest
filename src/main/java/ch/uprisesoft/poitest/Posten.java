@@ -5,21 +5,26 @@
  */
 package ch.uprisesoft.poitest;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+
 /**
  *
  * @author rma
  */
 public class Posten {
-    private final Double summe;
+    private final BigDecimal summe;
     private final String bkp;
     private final String kostenstelle;
     private final String reNr;
     private final String empfaenger;
-    private final int rekap;
+    private final String rekap;
     private final String kommentar;
 
-    public Posten(Double summe, String bkp, String kostenstelle,  String empfaenger, String reNr, int rekap, String kommentar) {
-        this.summe = summe;
+    public Posten(String summe, String bkp, String kostenstelle,  String empfaenger, String reNr, String rekap, String kommentar) {
+        BigDecimal validAmount = new BigDecimal(summe).setScale(2,RoundingMode.HALF_DOWN);
+//        System.out.println(validAmount.toString().replaceAll("\\.", ","));
+        this.summe = validAmount;
         this.bkp = bkp;
         this.kostenstelle = kostenstelle;
         this.empfaenger = empfaenger;
@@ -28,7 +33,7 @@ public class Posten {
         this.kommentar = kommentar;
     }
 
-    public Double getSumme() {
+    public BigDecimal getSumme() {
         return summe;
     }
 
@@ -48,7 +53,7 @@ public class Posten {
         return reNr;
     }
 
-    public int getRekap() {
+    public String getRekap() {
         return rekap;
     }
 
