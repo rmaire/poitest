@@ -4,7 +4,6 @@
  */
 package ch.uprisesoft.poitest;
 
-import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -18,7 +17,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
-import org.apache.poi.openxml4j.util.ZipSecureFile;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.CellType;
@@ -42,18 +40,17 @@ public class Poitest {
     private static String DIV_SHEET_NAME = "Divers";
 
     private String controlFile;
-    
-//    private List<Posten> posten;
 
+//    private List<Posten> posten;
     public Poitest() throws IOException, InvalidFormatException {
-        controlFile = copyWorkBook("C:\\Users\\rma\\Desktop\\BBH\\Baukontrolle_AMSEL_sevi_roman_neu_04072022141500_korrigiert.xlsx");
+        controlFile = copyWorkBook("C:\\Users\\roman\\OneDrive\\Desktop\\BBH\\Baukontrolle_AMSEL_sevi_roman_neu_08082022154824_korrigiert.xlsx");
     }
 
-    public static void main(String[] args) throws IOException, InvalidFormatException {
+    public static void main(String[] args) throws IOException, InvalidFormatException, FileNotFoundException, CloneNotSupportedException {
         new Poitest().run();
     }
 
-    private void run() throws FileNotFoundException, IOException, InvalidFormatException {
+    private void run() throws FileNotFoundException, IOException, InvalidFormatException, CloneNotSupportedException {
 
         Workbook wb = new XSSFWorkbook(new FileInputStream(controlFile));
 //        Sheet s = wb.getSheet(CONTROL_SHEET_NAME);
@@ -68,22 +65,64 @@ public class Poitest {
         posten.addAll(getAnweisungen(wb, REC_SHEET_NAME));
         posten.addAll(getAnweisungen(wb, DIV_SHEET_NAME));
 
-//        wb.close();
+        List<Posten> postenGruppen = new ArrayList<>();
 
+        for (Posten p : posten) {
+            groupPosten(postenGruppen, p);
+        }
+
+//        wb.close();
 //        wb = new XSSFWorkbook(new FileInputStream(controlFile));
 //        ZipSecureFile.setMinInflateRatio(-1.0d);
-        for (Posten p : posten) {
+//        for (Posten p : posten) {
+//            System.out.println(p);
+//            addToSheet(p, wb);
+//        }
+        for (Posten p : postenGruppen) {
             System.out.println(p);
             addToSheet(p, wb);
         }
-        
+
+//        BigDecimal sum = new BigDecimal(0);
+//        for (Posten p : posten) {
+//            sum = sum.add(p.getSumme());
+//        }
+//        System.out.println(sum);
+//        
+//        sum = new BigDecimal(0);
+//        for (Posten p : postenGruppen) {
+//            sum = sum.add(p.getSumme());
+//        }
+//        System.out.println(sum);
+//        
+//        
+//        System.out.println(posten.size());
+//        System.out.println(postenGruppen.size());
+        // TODO
         wb.write(new FileOutputStream(controlFile));
         wb.setForceFormulaRecalculation(true);
         wb.close();
     }
 
+    private void groupPosten(List<Posten> postenSummen, Posten posten) throws CloneNotSupportedException {
+
+        for (Posten gp : postenSummen) {
+            if (gp.getBkp().equals(posten.getBkp())
+                    && gp.getKostenstelle().equals(posten.getKostenstelle())
+                    && gp.getReNr().equals(posten.getReNr())) {
+//                System.out.println("Match:");
+//                System.out.println(posten);
+//                System.out.println(gp);
+//                System.out.println("===================");
+                gp.setSumme(gp.getSumme().add(posten.getSumme()));
+                return;
+            }
+        }
+        postenSummen.add(posten.clone());
+    }
+
     private List<Posten> getAnweisungen(Workbook wb, String sheetName) {
-        List<Posten> declined = new ArrayList<>();
+//        List<Posten> declined = new ArrayList<>();
         List<Posten> rowInControl = new ArrayList<>();
 
         Sheet s = wb.getSheet(sheetName);
@@ -92,12 +131,18 @@ public class Poitest {
         rows.next();
         while (rows.hasNext()) {
             Row r = rows.next();
-            Posten p = parseRekapLine(r);
-            if (p.getBkp().toLowerCase().equals("divers") || p.getKostenstelle().toLowerCase().equals("divers")) {
-                declined.add(p);
-            } else {
-                rowInControl.add(p);
+            try {
+                Posten p = parseRekapLine(r);
+                if (p.getBkp().toLowerCase().equals("divers") || p.getKostenstelle().toLowerCase().equals("divers")) {
+//                declined.add(p);
+                } else {
+                    rowInControl.add(p);
+                }
+            } catch (NullPointerException npe) {
+                System.out.println("NPE in line " + r.getRowNum() + ", Sheet " + r.getSheet().getSheetName());
+                System.exit(-1);
             }
+
         }
 
         return rowInControl;
@@ -138,11 +183,10 @@ public class Poitest {
         Cell reNr = newRow.createCell(12);
         reNr.setCellValue(p.getReNr());
         setCellFontTo8Pt(reNr);
-        
-        Cell kommentar = newRow.createCell(8);
-        kommentar.setCellValue(p.getKommentar());
-        setCellFontTo8Pt(kommentar);
-        
+
+//        Cell kommentar = newRow.createCell(8);
+//        kommentar.setCellValue(p.getKommentar());
+//        setCellFontTo8Pt(kommentar);
         Cell rekap = newRow.createCell(20);
         rekap.setCellValue(p.getRekap());
         setCellFontTo8Pt(rekap);
@@ -228,7 +272,7 @@ public class Poitest {
         CellUtil.setFont(c, newFont);
     }
 
-    private Posten parseRekapLine(Row row) {
+    private Posten parseRekapLine(Row row) throws NullPointerException {
         DataFormatter formatter = new DataFormatter();
 
         String summe = Double.toString(row.getCell(5).getNumericCellValue());
@@ -245,13 +289,12 @@ public class Poitest {
         Cell empfaengerCell = row.getCell(3);
         String empfaenger = formatter.formatCellValue(empfaengerCell);
 
-        Cell kommentarCell = row.getCell(7);
-        String kommentar = formatter.formatCellValue(kommentarCell);
-        
+//        Cell kommentarCell = row.getCell(7);
+//        String kommentar = formatter.formatCellValue(kommentarCell);
         Cell rekapCell = row.getCell(6);
-        String rekap =  formatter.formatCellValue(rekapCell);
+        String rekap = formatter.formatCellValue(rekapCell);
 
-        return new Posten(summe, bkp, ks, empfaenger, reNr, rekap, kommentar);
+        return new Posten(summe, bkp, ks, empfaenger, reNr, rekap);
     }
 
     private List<Kostenstelle> loadKs(Sheet s) {

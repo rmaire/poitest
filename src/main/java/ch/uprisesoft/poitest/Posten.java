@@ -13,15 +13,15 @@ import java.math.RoundingMode;
  * @author rma
  */
 public class Posten {
-    private final BigDecimal summe;
+    private BigDecimal summe;
     private final String bkp;
     private final String kostenstelle;
     private final String reNr;
     private final String empfaenger;
     private final String rekap;
-    private final String kommentar;
+//    private final String kommentar;
 
-    public Posten(String summe, String bkp, String kostenstelle,  String empfaenger, String reNr, String rekap, String kommentar) {
+    public Posten(String summe, String bkp, String kostenstelle,  String empfaenger, String reNr, String rekap) {
         BigDecimal validAmount = new BigDecimal(summe).setScale(2,RoundingMode.HALF_DOWN);
 //        System.out.println(validAmount.toString().replaceAll("\\.", ","));
         this.summe = validAmount;
@@ -30,11 +30,15 @@ public class Posten {
         this.empfaenger = empfaenger;
         this.reNr = reNr;
         this.rekap = rekap;
-        this.kommentar = kommentar;
+//        this.kommentar = kommentar;
     }
 
     public BigDecimal getSumme() {
         return summe;
+    }
+
+    public void setSumme(BigDecimal summe) {
+        this.summe = summe;
     }
 
     public String getBkp() {
@@ -56,14 +60,26 @@ public class Posten {
     public String getRekap() {
         return rekap;
     }
-
-    public String getKommentar() {
-        return kommentar;
-    }
+//
+//    public String getKommentar() {
+//        return kommentar;
+//    }
 
     @Override
     public String toString() {
-        return "Posten{" + "summe=" + summe + ", bkp=" + bkp + ", kostenstelle=" + kostenstelle + ", reNr=" + reNr + ", empfaenger=" + empfaenger + ", rekap=" + rekap + ", kommentar=" + kommentar + '}';
+        return "Posten{" + "summe=" + summe + ", bkp=" + bkp + ", kostenstelle=" + kostenstelle + ", reNr=" + reNr + ", empfaenger=" + empfaenger + ", rekap=" + rekap + '}';
+    }
+    
+    @Override
+    public Posten clone() throws CloneNotSupportedException{
+//        super.clone();
+        return new Posten(this.summe.toString()
+                , this.bkp
+                , this.kostenstelle
+                , this.empfaenger
+                , this.reNr
+                , this.rekap
+        );
     }
     
 }
